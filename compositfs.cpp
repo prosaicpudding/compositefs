@@ -20,6 +20,13 @@
 #define _XOPEN_SOURCE 700
 #endif
 
+// determine the system's max path length
+#ifdef PATH_MAX
+    const int pathmax = PATH_MAX;
+#else
+    const int pathmax = 1024;
+#endif
+
 #include <string>
 #include <fuse.h>
 #include <stdio.h>
@@ -33,6 +40,8 @@
 //#ifdef HAVE_SETXATTR
 #include <sys/xattr.h>
 //#endif
+
+const char *basepath;
 
 using namespace std;
 
@@ -81,7 +90,11 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	(void) offset;
 	(void) fi;
 
-	dp = opendir(path);
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
+
+	dp = opendir(name);
 	if (dp == NULL)
 		return -errno;
 
@@ -93,7 +106,7 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		st.st_mode = de->d_type << 12;
 //is this right?
 
-		string thepath=path;
+		string thepath=name;
 		thepath+="/";
 		thepath+=de->d_name;
 		
@@ -512,10 +525,21 @@ void xmp_operations() {
 #endif
 }
 
+void usage(char* name) {
+	printf("Usage\n");	//Will be detailed later
+}
+
 int main(int argc, char *argv[])
 {
 	xmp_operations();
 
+	if (argc < 2) {
+		usage(argv[0]);
+		return 0;
+	}
+	
+	basepath = argv[1];
+
 	umask(0);
-	return fuse_main(argc, argv, &xmp_oper, NULL);
+	return fuse_main(argc-1, argv+1, &xmp_oper, NULL);
 }
