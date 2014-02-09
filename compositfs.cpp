@@ -538,7 +538,9 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 	
-	basepath = argv[1];
+	basepath = argv[1];	//Use this basepath in almost every operation, cncatinate the basepath and the path passed in to get the absolute path. An example is written in readdir
+
+/* This is a just simple way to do it. To make a fully functional version of arguments parseing approach, even with optional arguments, you can use fuse_opt_parse and struct Opt to do it. For now, it is not necessary*/
 
 	umask(0);
 	return fuse_main(argc-1, argv+1, &xmp_oper, NULL);
