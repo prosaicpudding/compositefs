@@ -20,6 +20,7 @@
 #define _XOPEN_SOURCE 700
 #endif
 
+#include "compositfs-helpers.h"
 // determine the system's max path length
 #ifdef PATH_MAX
     const int pathmax = PATH_MAX;
@@ -45,11 +46,35 @@ const char *basepath;
 
 using namespace std;
 
+
 static int xmp_getattr(const char *path, struct stat *stbuf)
 {
 	int res;
 
-	res = lstat(path, stbuf);
+/* something in here is causing the errors*/
+// ls: cannot access /mnt: Software caused connection abort
+// bash: cd: /mnt: Transport endpoint is not connected
+/* working on this issue -h*/
+
+
+//	string dpath=path;
+//	size_t lastslash=dpath.find_last_of("/");
+//	dpath=dpath.substr(0,lastslash);
+//	string filename = dpath.substr(lastslash+1);
+		
+
+
+	if(res = lstat(path, stbuf) == 0)
+		return 0; //not a composit file
+
+	//find which file the comp file is in
+//	string parentfile=find_parent_file(dpath,filename);
+//	if (parentfile=="")
+//		return -errno;
+//	res=lstat((dpath+"/"+parentfile).c_str(),stbuf);
+	//set stbuf->st_size to the actual size
+
+
 	if (res == -1)
 		return -errno;
 
@@ -84,7 +109,7 @@ static int xmp_readlink(const char *path, char *buf, size_t size)
 static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		       off_t offset, struct fuse_file_info *fi)
 {
-	DIR *dp;
+	DIR *dp;	
 	struct dirent *de;
 
 	(void) offset;
@@ -99,14 +124,18 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		return -errno;
 
 	while ((de = readdir(dp)) != NULL) 
-	{
+	{//check each entry in the directory
 		struct stat st;
 		memset(&st, 0, sizeof(st));
+		//allocate space for the stat struct
 		st.st_ino = de->d_ino;
+
+	//this was in the example version
 		st.st_mode = de->d_type << 12;
-//is this right?
+	//but I don't get the shift. Is it right?
 
 		string thepath=name;
+		//will be the path to each directory entry
 		thepath+="/";
 		thepath+=de->d_name;
 		
@@ -115,10 +144,14 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		int xattribsize=llistxattr (thepath.c_str(),none,(size_t)0);
 		char xattribs [xattribsize];
 
-		if (llistxattr(thepath.c_str(),xattribs,(size_t)xattribsize)!=-1)
-		{
+//		if (llistxattr(thepath.c_str(),xattribs,(size_t)xattribsize)!=-1)
+		if(xattribsize!=-1)
+		{//for each xatrtib which is a sub file, add it to the buffer
+			llistxattr(thepath.c_str(),xattribs,(size_t)xattribsize);
+			
 			int i=0;
 			bool iscmp=0;
+			//checks to make sure the xattribs aren't just system stuff
 			while(i<xattribsize)
 			{
 				string nextfile;
