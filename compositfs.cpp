@@ -43,6 +43,8 @@
 //#endif
 
 const char *basepath;
+const char *mountpoint;
+
 
 using namespace std;
 
@@ -51,29 +53,24 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 {
 	int res;
 
-/* something in here is causing the errors*/
-// ls: cannot access /mnt: Software caused connection abort
-// bash: cd: /mnt: Transport endpoint is not connected
-/* working on this issue -h*/
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
 
-
-//	string dpath=path;
-//	size_t lastslash=dpath.find_last_of("/");
-//	dpath=dpath.substr(0,lastslash);
-//	string filename = dpath.substr(lastslash+1);
-		
-
-
-	if(res = lstat(path, stbuf) == 0)
+	if(res = lstat(name, stbuf) == 0)
 		return 0; //not a composit file
 
-	//find which file the comp file is in
-//	string parentfile=find_parent_file(dpath,filename);
-//	if (parentfile=="")
-//		return -errno;
-//	res=lstat((dpath+"/"+parentfile).c_str(),stbuf);
-	//set stbuf->st_size to the actual size
+	string dpath=name;
+	size_t lastslash=dpath.find_last_of("/");
+	string filename = dpath.substr(lastslash+1);
+	dpath=dpath.substr(0,lastslash);
 
+	//find which file the comp file is in
+	string parentfile=find_parent_file(dpath,filename);
+	if (parentfile=="")
+		return -errno;
+	res=lstat((dpath+"/"+parentfile).c_str(),stbuf);
+	//set stbuf->st_size to the actual size
 
 	if (res == -1)
 		return -errno;
@@ -84,7 +81,7 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 static int xmp_access(const char *path, int mask)
 {
 	int res;
-
+	
 	res = access(path, mask);
 	if (res == -1)
 		return -errno;
@@ -115,11 +112,14 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	(void) offset;
 	(void) fi;
 
+
 	char name[pathmax], *ptr;
 	strncpy(name, basepath, sizeof(name));
 	strncat(name, path, sizeof(name)-strlen(name));
 
 	dp = opendir(name);
+
+//	dp = opendir(path);
 	if (dp == NULL)
 		return -errno;
 
@@ -135,8 +135,9 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	//but I don't get the shift. Is it right?
 
 		string thepath=name;
+//		string thepath=path;
 		//will be the path to each directory entry
-		thepath+="/";
+//		thepath+="/";
 		thepath+=de->d_name;
 		
 		char* none;
@@ -182,12 +183,12 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		{
 			if (filler(buf, de->d_name, &st, 0))
 			{	
-//?				return -errno;
+//$				return -errno;
 				break;
 			}
 		}
 	}
-
+	
 	closedir(dp);
 	return 0;
 }
@@ -343,10 +344,40 @@ string cmp_path_to_file(const char* path)
 static int xmp_open(const char *path, struct fuse_file_info *fi)
 {
 	int res;
+//version 1
+	string thepath=basepath;
+	thepath+= path;
+//version 2
+//	string thepath=path;
+//	int i=0;
+//	while (thepath.at(i)==mountpoint[i])
+//	{
+//		++i; 
+//		if (i>=strlen(mountpoint))break;	
+//	}
 
+//	thepath=basepath+thepath.substr(i);
+//	res = open(thepath.c_str(), fi->flags);
+
+//	string thepath=path;
 	res = open(path, fi->flags);
 	if (res == -1)
-		return -errno;
+	{
+		string dpath=thepath;
+		size_t lastslash=dpath.find_last_of("/");
+		dpath=dpath.substr(0,lastslash);
+		string filename = dpath.substr(lastslash+1);
+		string parentpath= dpath + find_parent_file(dpath, filename);
+		
+		
+		
+		//try to open as compositfile if ther is one
+		if (dpath!=parentpath)
+			res = open ((dpath + find_parent_file(dpath, filename)).c_str(), fi->flags);
+		if (res == -1)
+			return -errno;
+	}	
+
 
 	close(res);
 	return 0;
@@ -359,7 +390,12 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	int res;
 
 	(void) fi;
-	fd = open(path, O_RDONLY);
+
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
+
+	fd = open(name, O_RDONLY);
 	if (fd == -1)
 		return -errno;
 
@@ -572,7 +608,7 @@ int main(int argc, char *argv[])
 	}
 	
 	basepath = argv[1];	//Use this basepath in almost every operation, cncatinate the basepath and the path passed in to get the absolute path. An example is written in readdir
-
+	mountpoint= argv[2];
 /* This is a just simple way to do it. To make a fully functional version of arguments parseing approach, even with optional arguments, you can use fuse_opt_parse and struct Opt to do it. For now, it is not necessary*/
 
 	umask(0);
