@@ -51,29 +51,24 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 {
 	int res;
 
-/* something in here is causing the errors*/
-// ls: cannot access /mnt: Software caused connection abort
-// bash: cd: /mnt: Transport endpoint is not connected
-/* working on this issue -h*/
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
 
-
-//	string dpath=path;
-//	size_t lastslash=dpath.find_last_of("/");
-//	dpath=dpath.substr(0,lastslash);
-//	string filename = dpath.substr(lastslash+1);
-		
-
-
-	if(res = lstat(path, stbuf) == 0)
+	if(res = lstat(name, stbuf) == 0)
 		return 0; //not a composit file
 
-	//find which file the comp file is in
-//	string parentfile=find_parent_file(dpath,filename);
-//	if (parentfile=="")
-//		return -errno;
-//	res=lstat((dpath+"/"+parentfile).c_str(),stbuf);
-	//set stbuf->st_size to the actual size
+	string dpath=name;
+	size_t lastslash=dpath.find_last_of("/");
+	string filename = dpath.substr(lastslash+1);
+	dpath=dpath.substr(0,lastslash);
 
+	//find which file the comp file is in
+	string parentfile=find_parent_file(dpath,filename);
+	if (parentfile=="")
+		return -errno;
+	res=lstat((dpath+"/"+parentfile).c_str(),stbuf);
+	//set stbuf->st_size to the actual size
 
 	if (res == -1)
 		return -errno;
@@ -84,8 +79,12 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 static int xmp_access(const char *path, int mask)
 {
 	int res;
+	
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
 
-	res = access(path, mask);
+	res = access(name, mask);
 	if (res == -1)
 		return -errno;
 
@@ -96,7 +95,11 @@ static int xmp_readlink(const char *path, char *buf, size_t size)
 {
 	int res;
 
-	res = readlink(path, buf, size - 1);
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
+
+	res = readlink(name, buf, size - 1);
 	if (res == -1)
 		return -errno;
 
@@ -115,11 +118,14 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	(void) offset;
 	(void) fi;
 
+
 	char name[pathmax], *ptr;
 	strncpy(name, basepath, sizeof(name));
 	strncat(name, path, sizeof(name)-strlen(name));
 
 	dp = opendir(name);
+
+//	dp = opendir(path);
 	if (dp == NULL)
 		return -errno;
 
@@ -135,8 +141,9 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	//but I don't get the shift. Is it right?
 
 		string thepath=name;
+//		string thepath=path;
 		//will be the path to each directory entry
-		thepath+="/";
+//		thepath+="/";
 		thepath+=de->d_name;
 		
 		char* none;
@@ -182,12 +189,12 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		{
 			if (filler(buf, de->d_name, &st, 0))
 			{	
-//?				return -errno;
+//$				return -errno;
 				break;
 			}
 		}
 	}
-
+	
 	closedir(dp);
 	return 0;
 }
@@ -199,14 +206,18 @@ static int xmp_mknod(const char *path, mode_t mode, dev_t rdev)
 
 	/* On Linux this could just be 'mknod(path, mode, rdev)' but this
 	   is more portable */
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
+
 	if (S_ISREG(mode)) {
-		res = open(path, O_CREAT | O_EXCL | O_WRONLY, mode);
+		res = open(name, O_CREAT | O_EXCL | O_WRONLY, mode);
 		if (res >= 0)
 			res = close(res);
 	} else if (S_ISFIFO(mode))
-		res = mkfifo(path, mode);
+		res = mkfifo(name, mode);
 	else
-		res = mknod(path, mode, rdev);
+		res = mknod(name, mode, rdev);
 	if (res == -1)
 		return -errno;
 
@@ -217,7 +228,11 @@ static int xmp_mkdir(const char *path, mode_t mode)
 {
 	int res;
 
-	res = mkdir(path, mode);
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
+
+	res = mkdir(name, mode);
 	if (res == -1)
 		return -errno;
 
@@ -228,7 +243,11 @@ static int xmp_unlink(const char *path)
 {
 	int res;
 
-	res = unlink(path);
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
+
+	res = unlink(name);
 	if (res == -1)
 		return -errno;
 
@@ -239,7 +258,11 @@ static int xmp_rmdir(const char *path)
 {
 	int res;
 
-	res = rmdir(path);
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
+
+	res = rmdir(name);
 	if (res == -1)
 		return -errno;
 
@@ -283,7 +306,11 @@ static int xmp_chmod(const char *path, mode_t mode)
 {
 	int res;
 
-	res = chmod(path, mode);
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
+
+	res = chmod(name, mode);
 	if (res == -1)
 		return -errno;
 
@@ -294,7 +321,11 @@ static int xmp_chown(const char *path, uid_t uid, gid_t gid)
 {
 	int res;
 
-	res = lchown(path, uid, gid);
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
+
+	res = lchown(name, uid, gid);
 	if (res == -1)
 		return -errno;
 
@@ -305,7 +336,11 @@ static int xmp_truncate(const char *path, off_t size)
 {
 	int res;
 
-	res = truncate(path, size);
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
+
+	res = truncate(name, size);
 	if (res == -1)
 		return -errno;
 
@@ -317,8 +352,12 @@ static int xmp_utimens(const char *path, const struct timespec ts[2])
 {
 	int res;
 
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
+
 	/* don't use utime/utimes since they follow symlinks */
-	res = utimensat(0, path, ts, AT_SYMLINK_NOFOLLOW);
+	res = utimensat(0, name, ts, AT_SYMLINK_NOFOLLOW);
 	if (res == -1)
 		return -errno;
 
@@ -343,10 +382,45 @@ string cmp_path_to_file(const char* path)
 static int xmp_open(const char *path, struct fuse_file_info *fi)
 {
 	int res;
+//version 1
+	string thepath=basepath;
+	thepath+= path;
+//version 2
+//	string thepath=path;
+//	int i=0;
+//	while (thepath.at(i)==mountpoint[i])
+//	{
+//		++i; 
+//		if (i>=strlen(mountpoint))break;	
+//	}
 
-	res = open(path, fi->flags);
+//	thepath=basepath+thepath.substr(i);
+//	res = open(thepath.c_str(), fi->flags);
+
+//	string thepath=path;
+
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
+
+	res = open(name, fi->flags);
 	if (res == -1)
-		return -errno;
+	{
+		string dpath=name;
+		size_t lastslash=dpath.find_last_of("/");
+		dpath=dpath.substr(0,lastslash);
+		string filename = dpath.substr(lastslash+1);
+		string parentpath= dpath + find_parent_file(dpath, filename);
+		
+		
+		
+		//try to open as compositfile if ther is one
+		if (dpath!=parentpath)
+			res = open ((dpath + find_parent_file(dpath, filename)).c_str(), fi->flags);
+		if (res == -1)
+			return -errno;
+	}	
+
 
 	close(res);
 	return 0;
@@ -359,9 +433,18 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	int res;
 
 	(void) fi;
-	fd = open(path, O_RDONLY);
+
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
+
+	fd = open(name, O_RDONLY);
 	if (fd == -1)
 		return -errno;
+
+//check if file is composit
+//if so get begin and end
+//if out of range, handle appropriately
 
 	res = pread(fd, buf, size, offset);
 	if (res == -1)
@@ -377,8 +460,12 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 	int fd;
 	int res;
 
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
+
 	(void) fi;
-	fd = open(path, O_WRONLY);
+	fd = open(name, O_WRONLY);
 	if (fd == -1)
 		return -errno;
 
@@ -394,7 +481,11 @@ static int xmp_statfs(const char *path, struct statvfs *stbuf)
 {
 	int res;
 
-	res = statvfs(path, stbuf);
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
+
+	res = statvfs(name, stbuf);
 	if (res == -1)
 		return -errno;
 
@@ -432,10 +523,14 @@ static int xmp_fallocate(const char *path, int mode,
 
 	(void) fi;
 
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
+
 	if (mode)
 		return -EOPNOTSUPP;
 
-	fd = open(path, O_WRONLY);
+	fd = open(name, O_WRONLY);
 	if (fd == -1)
 		return -errno;
 
@@ -451,7 +546,11 @@ static int xmp_fallocate(const char *path, int mode,
 static int xmp_setxattr(const char *path, const char *name, const char *value,
 			size_t size, int flags)
 {
-	int res = lsetxattr(path, name, value, size, flags);
+	char pname[pathmax], *ptr;
+	strncpy(pname, basepath, sizeof(pname));
+	strncat(pname, path, sizeof(pname)-strlen(pname));
+
+	int res = lsetxattr(pname, name, value, size, flags);
 	if (res == -1)
 		return -errno;
 	return 0;
@@ -460,8 +559,12 @@ static int xmp_setxattr(const char *path, const char *name, const char *value,
 static int xmp_getxattr(const char *path, const char *name, char *value,
 			size_t size)
 {
+	char pname[pathmax], *ptr;
+	strncpy(pname, basepath, sizeof(pname));
+	strncat(pname, path, sizeof(pname)-strlen(pname));
+
 	//The size of size should always be 16 for now
-	int res = lgetxattr(path, name, value, size);
+	int res = lgetxattr(pname, name, value, size);
 	if (res == -1)
 		return -errno;
 	return res;
@@ -469,7 +572,11 @@ static int xmp_getxattr(const char *path, const char *name, char *value,
 
 static int xmp_listxattr(const char *path, char *list, size_t size)
 {
-	int res = llistxattr(path, list, size);
+	char pname[pathmax], *ptr;
+	strncpy(pname, basepath, sizeof(pname));
+	strncat(pname, path, sizeof(pname)-strlen(pname));
+
+	int res = llistxattr(pname, list, size);
 	if (res == -1)
 		return -errno;
 	return res;
@@ -477,7 +584,11 @@ static int xmp_listxattr(const char *path, char *list, size_t size)
 
 static int xmp_removexattr(const char *path, const char *name)
 {
-	int res = lremovexattr(path, name);
+	char pname[pathmax], *ptr;
+	strncpy(pname, basepath, sizeof(pname));
+	strncat(pname, path, sizeof(pname)-strlen(pname));
+
+	int res = lremovexattr(pname, name);
 	if (res == -1)
 		return -errno;
 	return 0;
