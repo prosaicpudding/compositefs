@@ -43,8 +43,6 @@
 //#endif
 
 const char *basepath;
-const char *mountpoint;
-
 
 using namespace std;
 
@@ -360,7 +358,8 @@ static int xmp_open(const char *path, struct fuse_file_info *fi)
 //	res = open(thepath.c_str(), fi->flags);
 
 //	string thepath=path;
-	res = open(path, fi->flags);
+
+	res = open(thepath.c_str(), fi->flags);
 	if (res == -1)
 	{
 		string dpath=thepath;
@@ -398,6 +397,10 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	fd = open(name, O_RDONLY);
 	if (fd == -1)
 		return -errno;
+
+//check if file is composit
+//if so get begin and end
+//if out of range, handle appropriately
 
 	res = pread(fd, buf, size, offset);
 	if (res == -1)
@@ -608,7 +611,7 @@ int main(int argc, char *argv[])
 	}
 	
 	basepath = argv[1];	//Use this basepath in almost every operation, cncatinate the basepath and the path passed in to get the absolute path. An example is written in readdir
-	mountpoint= argv[2];
+
 /* This is a just simple way to do it. To make a fully functional version of arguments parseing approach, even with optional arguments, you can use fuse_opt_parse and struct Opt to do it. For now, it is not necessary*/
 
 	umask(0);
