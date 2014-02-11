@@ -27,7 +27,6 @@ int main (void)
 	//I meant for filed not to be a text file
 	//it's just random binary
 
-
 	*value=0x00;
 	getxattr("./CompFile1.cmp","user.filea.txt",value,16);
 	printf("%d\n",*value);
