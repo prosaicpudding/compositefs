@@ -21,6 +21,12 @@
 #endif
 
 #include "compositfs-helpers.h"
+// determine the system's max path length
+#ifdef PATH_MAX
+    const int pathmax = PATH_MAX;
+#else
+    const int pathmax = 1024;
+#endif
 
 #include <string>
 #include <fuse.h>
@@ -35,6 +41,8 @@
 //#ifdef HAVE_SETXATTR
 #include <sys/xattr.h>
 //#endif
+
+const char *basepath;
 
 using namespace std;
 
@@ -107,8 +115,12 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	(void) offset;
 	(void) fi;
 
-	dp = opendir(path);
-	if (dp == NULL)	//print an error if the directory doesn't exist
+	char name[pathmax], *ptr;
+	strncpy(name, basepath, sizeof(name));
+	strncat(name, path, sizeof(name)-strlen(name));
+
+	dp = opendir(name);
+	if (dp == NULL)
 		return -errno;
 
 	while ((de = readdir(dp)) != NULL) 
@@ -122,7 +134,7 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		st.st_mode = de->d_type << 12;
 	//but I don't get the shift. Is it right?
 
-		string thepath=path; 
+		string thepath=name;
 		//will be the path to each directory entry
 		thepath+="/";
 		thepath+=de->d_name;
@@ -509,42 +521,60 @@ static struct fuse_operations xmp_oper;
 #endif
 */
 
-int main(int argc, char *argv[])
-{
-//	xmp_oper.init		=xmp_init;
-//	xmp_oper.destroy	=xmp_destroy;
-	xmp_oper.getattr	= xmp_getattr;
-	xmp_oper.access		= xmp_access;
-	xmp_oper.readlink	= xmp_readlink;
-	xmp_oper.readdir	= xmp_readdir;
-	xmp_oper.mknod		= xmp_mknod;
-	xmp_oper.mkdir		= xmp_mkdir;
-	xmp_oper.symlink	= xmp_symlink;
-	xmp_oper.unlink		= xmp_unlink;
-	xmp_oper.rmdir		= xmp_rmdir;
-	xmp_oper.rename		= xmp_rename;
-	xmp_oper.link		= xmp_link;
-	xmp_oper.chmod		= xmp_chmod;
-	xmp_oper.chown		= xmp_chown;
-	xmp_oper.truncate	= xmp_truncate;
+void xmp_operations() {
+//      xmp_oper.init           =xmp_init;
+//      xmp_oper.destroy        =xmp_destroy;
+        xmp_oper.getattr        = xmp_getattr;
+        xmp_oper.access         = xmp_access;
+        xmp_oper.readlink       = xmp_readlink;
+        xmp_oper.readdir        = xmp_readdir;
+        xmp_oper.mknod          = xmp_mknod;
+        xmp_oper.mkdir          = xmp_mkdir;
+        xmp_oper.symlink        = xmp_symlink;
+        xmp_oper.unlink         = xmp_unlink;
+        xmp_oper.rmdir          = xmp_rmdir;
+        xmp_oper.rename         = xmp_rename;
+        xmp_oper.link           = xmp_link;
+        xmp_oper.chmod          = xmp_chmod;
+        xmp_oper.chown          = xmp_chown;
+        xmp_oper.truncate       = xmp_truncate;
 #ifdef HAVE_UTIMENSAT
-	xmp_oper.utimens	= xmp_utimens;
+        xmp_oper.utimens        = xmp_utimens;
 #endif
-	xmp_oper.open		= xmp_open;
-	xmp_oper.read		= xmp_read;
-	xmp_oper.write		= xmp_write;
-	xmp_oper.statfs		= xmp_statfs;
-	xmp_oper.release	= xmp_release;
-	xmp_oper.fsync		= xmp_fsync;
+        xmp_oper.open           = xmp_open;
+        xmp_oper.read           = xmp_read;
+        xmp_oper.write          = xmp_write;
+        xmp_oper.statfs         = xmp_statfs;
+        xmp_oper.release        = xmp_release;
+        xmp_oper.fsync          = xmp_fsync;
 #ifdef HAVE_POSIX_FALLOCATE
-	xmp_oper.fallocate	= xmp_fallocate;
+        xmp_oper.fallocate      = xmp_fallocate;
 #endif
 #ifdef HAVE_SETXATTR
-	xmp_oper.setxattr	= xmp_setxattr;
-	xmp_oper.getxattr	= xmp_getxattr;
-	xmp_oper.listxattr	= xmp_listxattr;
-	xmp_oper.removexattr	= xmp_removexattr;
+        xmp_oper.setxattr       = xmp_setxattr;
+        xmp_oper.getxattr       = xmp_getxattr;
+        xmp_oper.listxattr      = xmp_listxattr;
+        xmp_oper.removexattr    = xmp_removexattr;
 #endif
+}
+
+void usage(char* name) {
+	printf("Usage\n");	//Will be detailed later
+}
+
+int main(int argc, char *argv[])
+{
+	xmp_operations();
+
+	if (argc < 2) {
+		usage(argv[0]);
+		return 0;
+	}
+	
+	basepath = argv[1];	//Use this basepath in almost every operation, cncatinate the basepath and the path passed in to get the absolute path. An example is written in readdir
+
+/* This is a just simple way to do it. To make a fully functional version of arguments parseing approach, even with optional arguments, you can use fuse_opt_parse and struct Opt to do it. For now, it is not necessary*/
+
 	umask(0);
-	return fuse_main(argc, argv, &xmp_oper, NULL);
+	return fuse_main(argc-1, argv+1, &xmp_oper, NULL);
 }
