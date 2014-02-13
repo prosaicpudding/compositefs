@@ -16,7 +16,6 @@ off_t get_subfile_begin(string parentpath, string filename)
 	if (fileindex==-1)
 	{//this was a bad call
 	//the subfile isn't under the given parent
-		delete(buffer);
 		return 0;
 	}
 	int fileEnd = subfileEnds.at(fileindex);
