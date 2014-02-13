@@ -1,5 +1,47 @@
 #include "compositfs-helpers.h"
 
+//treating the xattrib values as off_t (logically), as it seemed most appropriate
+off_t get_subfile_begin(string parentpath, string filename)
+{
+	vector <string> subfiles = get_subfiles(parentpath);
+	vector <off_t> subfileEnds;
+	off_t* buffer= new off_t;
+	int fileindex=-1;
+	for (int i=0; i<subfiles.size(); i++)
+	{
+		subfileEnds.push_back( get_subfile_end(parentpath, subfiles.at(i)) );
+		if(filename==subfiles.at(i))
+			fileindex=i;
+	}	
+	if (fileindex==-1)
+	{//this was a bad call
+	//the subfile isn't under the given parent
+		delete(buffer);
+		return 0;
+	}
+	int fileEnd = subfileEnds.at(fileindex);
+	int fileBegin = 0;
+	for (int i=0; i<subfileEnds.size(); i++)
+	{
+		if(subfileEnds.at(i)>fileBegin && subfileEnds.at(i)<fileEnd)
+			fileBegin=subfileEnds.at(i)+1;
+	}	
+	delete (buffer);
+	return fileBegin;
+}
+
+off_t get_subfile_end(string parentpath, string filename)
+{
+
+	off_t* buffer= new off_t;
+	*buffer=0;
+	lgetxattr(parentpath.c_str(),("user."+filename).c_str(),buffer,sizeof(off_t));
+	off_t ret=*buffer;
+	delete (buffer);
+
+	return ret;
+
+}
 
 vector<string> get_subfiles(string path)
 {
