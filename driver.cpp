@@ -15,7 +15,7 @@ int main (void)
 
 //	I tested on CompFile1.cmp with two extended attribute user.filea.txt and user.filesb.txt
 
-	int* value=new int;
+	off_t* value=new off_t;
 	*value=0x63;	//address of the end of filea.txt
 	setxattr("./CompFile1.cmp","user.filea.txt",value,1,0);
 	*value=0x117;	//likewise
@@ -28,17 +28,17 @@ int main (void)
 	//it's just random binary
 
 	*value=0x00;
-	getxattr("./CompFile1.cmp","user.filea.txt",value,16);
-	printf("%d\n",*value);
+	getxattr("./CompFile1.cmp","user.filea.txt",value,sizeof(off_t));
+	printf("%li\n",*value);
 
-	getxattr("CompFile1.cmp","user.fileb.txt",value,16);
-	printf("%d\n",*value);
+	getxattr("CompFile1.cmp","user.fileb.txt",value,sizeof(off_t));
+	printf("%li\n",*value);
 
-	getxattr("CompFile1.cmp","user.filec.txt",value,16);
-	printf("%d\n",*value);
+	getxattr("CompFile1.cmp","user.filec.txt",value,sizeof(off_t));
+	printf("%li\n",*value);
 
-	getxattr("CompFile1.cmp","user.filed",value,16);
-	printf("%d\n",*value);
+	getxattr("CompFile1.cmp","user.filed",value,sizeof(off_t));
+	printf("%li\n",*value);
 
 
 	delete(value);

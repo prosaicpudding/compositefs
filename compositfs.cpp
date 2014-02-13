@@ -69,6 +69,9 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 		return -errno;
 	res=lstat((dpath+"/"+parentfile).c_str(),stbuf);
 	//set stbuf->st_size to the actual size
+	off_t begin=get_subfile_begin(dpath+"/"+parentfile,filename);
+	off_t end=get_subfile_end(dpath+"/"+parentfile,filename);
+	stbuf->st_size=end-begin;
 
 	if (res == -1)
 		return -errno;
