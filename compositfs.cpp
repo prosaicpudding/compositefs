@@ -71,8 +71,7 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 	//set stbuf->st_size to the actual size
 	off_t begin=get_subfile_begin(dpath+"/"+parentfile,filename);
 	off_t end=get_subfile_end(dpath+"/"+parentfile,filename);
-	stbuf->st_size=end-begin;
-
+	stbuf->st_size=(end-begin)+1; //offset +1, because addresses start from 0
 	if (res == -1)
 		return -errno;
 
