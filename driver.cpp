@@ -18,7 +18,7 @@ int main (void)
 	off_t* value=new off_t;
 	*value=0x4F;	//address of the end of filea.txt
 	setxattr("./CompFile1.cmp","user.filea.txt",value,1,0);
-	*value=0x118;	//likewise
+	*value=0x117;	//likewise
 	setxattr("CompFile1.cmp","user.fileb.txt",value,2,0);
 	*value=0x24F;	//etc
 	setxattr("CompFile1.cmp","user.filec.txt",value,2,0);

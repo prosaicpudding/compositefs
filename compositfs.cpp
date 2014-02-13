@@ -143,9 +143,7 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	//but I don't get the shift. Is it right?
 
 		string thepath=name;
-//		string thepath=path;
 		//will be the path to each directory entry
-//		thepath+="/";
 		thepath+=de->d_name;
 		
 		char* none;
@@ -153,7 +151,6 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		int xattribsize=llistxattr (thepath.c_str(),none,(size_t)0);
 		char xattribs [xattribsize];
 
-//		if (llistxattr(thepath.c_str(),xattribs,(size_t)xattribsize)!=-1)
 		if(xattribsize!=-1)
 		{//for each xatrtib which is a sub file, add it to the buffer
 			llistxattr(thepath.c_str(),xattribs,(size_t)xattribsize);
@@ -367,62 +364,30 @@ static int xmp_utimens(const char *path, const struct timespec ts[2])
 }
 #endif
 
-/*working
-string cmp_path_to_file(const char* path)
-{//should only be called is the path does not lead 
-//to a valid regular file (indicating it is to a cmpfile
-	string pathstring=path;
-	size_t lastSlash
-	if (lastSlash=pathstring.find_last_of('/')>=pathstring.length())
-		pathstring="./"
-	else pathstring=pathstring.substr(0,lastSlash+1);
-	if (access(path)!=0)
-		return "";
-	//more	
-}
-*/
 static int xmp_open(const char *path, struct fuse_file_info *fi)
 {
 	int res;
-//version 1
-	string thepath=basepath;
-	thepath+= path;
-//version 2
-//	string thepath=path;
-//	int i=0;
-//	while (thepath.at(i)==mountpoint[i])
-//	{
-//		++i; 
-//		if (i>=strlen(mountpoint))break;	
-//	}
-
-//	thepath=basepath+thepath.substr(i);
-//	res = open(thepath.c_str(), fi->flags);
-
-//	string thepath=path;
 
 	char name[pathmax], *ptr;
 	strncpy(name, basepath, sizeof(name));
 	strncat(name, path, sizeof(name)-strlen(name));
 
 	res = open(name, fi->flags);
-	if (res == -1)
+	if (res < 0)
 	{
 		string dpath=name;
 		size_t lastslash=dpath.find_last_of("/");
-		dpath=dpath.substr(0,lastslash);
 		string filename = dpath.substr(lastslash+1);
-		string parentpath= dpath + find_parent_file(dpath, filename);
+		dpath=dpath.substr(0,lastslash);
+		string parentfile= find_parent_file(dpath,filename);
+		string parentpath= dpath + parentfile;
 		
-		
-		
-		//try to open as compositfile if ther is one
-		if (dpath!=parentpath)
-			res = open ((dpath + find_parent_file(dpath, filename)).c_str(), fi->flags);
-		if (res == -1)
+		//try to open as compositfile if there is one
+		if(parentfile!="")
+			res = open (parentpath.c_str(), fi->flags);
+		if (res<0)
 			return -errno;
 	}	
-
 
 	close(res);
 	return 0;
@@ -440,16 +405,41 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	strncpy(name, basepath, sizeof(name));
 	strncat(name, path, sizeof(name)-strlen(name));
 
+	string parentfile="";
+	int begin=0, end=0;
+	string parentpath;
+
 	fd = open(name, O_RDONLY);
-	if (fd == -1)
-		return -errno;
+	if (fd < 0)
+	{
+close(fd);
+		//check if file is composit
+		string dpath=name;
+		size_t lastslash=dpath.find_last_of("/");
+		string filename = dpath.substr(lastslash+1);
+		dpath=dpath.substr(0,lastslash);
+		parentfile = find_parent_file(dpath,filename);
+		string parentpath= dpath + parentfile;
+		
+		if (parentfile=="") //if there is no parent file, 
+				    //subfile does not exist
+			return -errno;
 
-//check if file is composit
-//if so get begin and end
-//if out of range, handle appropriately
+		//if so get begin and end
+		begin=get_subfile_begin(parentpath, filename);
+		end=get_subfile_end(parentpath, filename);
 
+		//if out of range, handle appropriately
+		if (offset<begin)
+			offset=begin;
+		if(size>end-begin+1)
+			size=end-begin+1;
+
+		//open the parentfile
+		fd = open(parentpath.c_str(), O_RDONLY);
+	}
 	res = pread(fd, buf, size, offset);
-	if (res == -1)
+	if (res < 0)
 		res = -errno;
 
 	close(fd);
@@ -669,6 +659,7 @@ void xmp_operations() {
         xmp_oper.listxattr      = xmp_listxattr;
         xmp_oper.removexattr    = xmp_removexattr;
 #endif
+//        xmp_oper.fstat    = xmp_fstat;
 }
 
 void usage(char* name) {
