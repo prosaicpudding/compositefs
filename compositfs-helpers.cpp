@@ -1,6 +1,15 @@
 #include "compositfs-helpers.h"
-
+//**Note**
 //treating the xattrib values as off_t (logically), as it seemed most appropriate
+
+
+//***
+// This function will return the beginning offset for the file 
+// 'filename' which is a subfile of 'parentpath.'
+// 'parentpath' should be an absolute path. 
+// February 2014
+// Helen
+//***
 off_t get_subfile_begin(string parentpath, string filename)
 {
 	vector <string> subfiles = get_subfiles(parentpath);
@@ -28,6 +37,13 @@ off_t get_subfile_begin(string parentpath, string filename)
 	return fileBegin;
 }
 
+//***
+// This function will return the end offset for the file 
+// 'filename' which is a subfile of 'parentpath.'
+// 'parentpath' should be an absolute path. 
+// February 2014
+// Helen
+//***
 off_t get_subfile_end(string parentpath, string filename)
 {
 
@@ -41,6 +57,13 @@ off_t get_subfile_end(string parentpath, string filename)
 
 }
 
+//***
+// This function will return a vector containing the names of 
+// all subfiles in the file 'path'.
+// 'path' should be the absolute path to a file.
+// February 2014
+// Helen
+//***
 vector<string> get_subfiles(string path)
 {
 	vector <string> ret;
@@ -72,6 +95,14 @@ vector<string> get_subfiles(string path)
 	return ret;
 }
 
+
+//***
+// This function will return the name of the parent file 
+// for the file 'name' in directory 'dpath.'
+// 'dpath' should the absolute path to the file.
+// February 2014
+// Helen
+//***
 string find_parent_file(string dpath, string name)
 {
         DIR *dp;
