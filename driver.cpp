@@ -13,8 +13,6 @@ using namespace std;
 int main (void)
 {
 
-//	I tested on CompFile1.cmp with two extended attribute user.filea.txt and user.filesb.txt
-
 	off_t* value=new off_t;
 	*value=0x4F;	//address of the end of filea.txt
 	setxattr("./CompFile1.cmp","user.filea.txt",value,1,0);
@@ -27,6 +25,12 @@ int main (void)
 	//I meant for filed not to be a text file
 	//it's just random binary
 
+	*value=0x32F;
+	setxattr("./CompFile2.cmp","user.file1.txt",value,2,0);
+
+	*value=0x383;
+	setxattr("./CompFile2.cmp","user.file2.txt",value,2,0);
+/*
 	*value=0x00;
 	getxattr("./CompFile1.cmp","user.filea.txt",value,sizeof(off_t));
 	printf("%li\n",*value);
@@ -39,7 +43,7 @@ int main (void)
 
 	getxattr("CompFile1.cmp","user.filed",value,sizeof(off_t));
 	printf("%li\n",*value);
-
+*/
 
 	delete(value);
 
