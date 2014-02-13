@@ -47,7 +47,7 @@ const char *basepath;
 using namespace std;
 
 
-static int xmp_getattr(const char *path, struct stat *stbuf)
+static int cmp_getattr(const char *path, struct stat *stbuf)
 {
 	int res;
 
@@ -68,17 +68,19 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 	if (parentfile=="")
 		return -errno;
 	res=lstat((dpath+"/"+parentfile).c_str(),stbuf);
+
 	//set stbuf->st_size to the actual size
 	off_t begin=get_subfile_begin(dpath+"/"+parentfile,filename);
 	off_t end=get_subfile_end(dpath+"/"+parentfile,filename);
 	stbuf->st_size=(end-begin)+1; //offset +1, because addresses start from 0
+
 	if (res == -1)
 		return -errno;
 
 	return 0;
 }
 
-static int xmp_access(const char *path, int mask)
+static int cmp_access(const char *path, int mask)
 {
 	int res;
 	
@@ -93,7 +95,7 @@ static int xmp_access(const char *path, int mask)
 	return 0;
 }
 
-static int xmp_readlink(const char *path, char *buf, size_t size)
+static int cmp_readlink(const char *path, char *buf, size_t size)
 {
 	int res;
 
@@ -111,7 +113,7 @@ static int xmp_readlink(const char *path, char *buf, size_t size)
 
 
 //#ifdef HAVE_SETXATTR
-static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
+static int cmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		       off_t offset, struct fuse_file_info *fi)
 {
 	DIR *dp;	
@@ -143,9 +145,7 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	//but I don't get the shift. Is it right?
 
 		string thepath=name;
-//		string thepath=path;
 		//will be the path to each directory entry
-//		thepath+="/";
 		thepath+=de->d_name;
 		
 		char* none;
@@ -153,7 +153,6 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		int xattribsize=llistxattr (thepath.c_str(),none,(size_t)0);
 		char xattribs [xattribsize];
 
-//		if (llistxattr(thepath.c_str(),xattribs,(size_t)xattribsize)!=-1)
 		if(xattribsize!=-1)
 		{//for each xatrtib which is a sub file, add it to the buffer
 			llistxattr(thepath.c_str(),xattribs,(size_t)xattribsize);
@@ -202,7 +201,7 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 }
 //#endif
 
-static int xmp_mknod(const char *path, mode_t mode, dev_t rdev)
+static int cmp_mknod(const char *path, mode_t mode, dev_t rdev)
 {
 	int res;
 
@@ -226,7 +225,7 @@ static int xmp_mknod(const char *path, mode_t mode, dev_t rdev)
 	return 0;
 }
 
-static int xmp_mkdir(const char *path, mode_t mode)
+static int cmp_mkdir(const char *path, mode_t mode)
 {
 	int res;
 
@@ -241,7 +240,7 @@ static int xmp_mkdir(const char *path, mode_t mode)
 	return 0;
 }
 
-static int xmp_unlink(const char *path)
+static int cmp_unlink(const char *path)
 {
 	int res;
 
@@ -256,7 +255,7 @@ static int xmp_unlink(const char *path)
 	return 0;
 }
 
-static int xmp_rmdir(const char *path)
+static int cmp_rmdir(const char *path)
 {
 	int res;
 
@@ -271,7 +270,7 @@ static int xmp_rmdir(const char *path)
 	return 0;
 }
 
-static int xmp_symlink(const char *from, const char *to)
+static int cmp_symlink(const char *from, const char *to)
 {
 	int res;
 
@@ -282,7 +281,7 @@ static int xmp_symlink(const char *from, const char *to)
 	return 0;
 }
 
-static int xmp_rename(const char *from, const char *to)
+static int cmp_rename(const char *from, const char *to)
 {
 	int res;
 
@@ -293,7 +292,7 @@ static int xmp_rename(const char *from, const char *to)
 	return 0;
 }
 
-static int xmp_link(const char *from, const char *to)
+static int cmp_link(const char *from, const char *to)
 {
 	int res;
 
@@ -304,7 +303,7 @@ static int xmp_link(const char *from, const char *to)
 	return 0;
 }
 
-static int xmp_chmod(const char *path, mode_t mode)
+static int cmp_chmod(const char *path, mode_t mode)
 {
 	int res;
 
@@ -319,7 +318,7 @@ static int xmp_chmod(const char *path, mode_t mode)
 	return 0;
 }
 
-static int xmp_chown(const char *path, uid_t uid, gid_t gid)
+static int cmp_chown(const char *path, uid_t uid, gid_t gid)
 {
 	int res;
 
@@ -334,7 +333,7 @@ static int xmp_chown(const char *path, uid_t uid, gid_t gid)
 	return 0;
 }
 
-static int xmp_truncate(const char *path, off_t size)
+static int cmp_truncate(const char *path, off_t size)
 {
 	int res;
 
@@ -350,7 +349,7 @@ static int xmp_truncate(const char *path, off_t size)
 }
 
 #ifdef HAVE_UTIMENSAT
-static int xmp_utimens(const char *path, const struct timespec ts[2])
+static int cmp_utimens(const char *path, const struct timespec ts[2])
 {
 	int res;
 
@@ -367,68 +366,42 @@ static int xmp_utimens(const char *path, const struct timespec ts[2])
 }
 #endif
 
-/*working
-string cmp_path_to_file(const char* path)
-{//should only be called is the path does not lead 
-//to a valid regular file (indicating it is to a cmpfile
-	string pathstring=path;
-	size_t lastSlash
-	if (lastSlash=pathstring.find_last_of('/')>=pathstring.length())
-		pathstring="./"
-	else pathstring=pathstring.substr(0,lastSlash+1);
-	if (access(path)!=0)
-		return "";
-	//more	
-}
-*/
-static int xmp_open(const char *path, struct fuse_file_info *fi)
+static int cmp_open(const char *path, struct fuse_file_info *fi)
 {
 	int res;
-//version 1
-	string thepath=basepath;
-	thepath+= path;
-//version 2
-//	string thepath=path;
-//	int i=0;
-//	while (thepath.at(i)==mountpoint[i])
-//	{
-//		++i; 
-//		if (i>=strlen(mountpoint))break;	
-//	}
-
-//	thepath=basepath+thepath.substr(i);
-//	res = open(thepath.c_str(), fi->flags);
-
-//	string thepath=path;
 
 	char name[pathmax], *ptr;
 	strncpy(name, basepath, sizeof(name));
 	strncat(name, path, sizeof(name)-strlen(name));
 
+	if(get_subfiles(name).size()!=0)
+	{//ignore this file, it's a composit parent file
+		return -errno;
+	}
 	res = open(name, fi->flags);
-	if (res == -1)
-	{
+	if (res < 0)
+	{//the file is either composit or non-existant
 		string dpath=name;
 		size_t lastslash=dpath.find_last_of("/");
-		dpath=dpath.substr(0,lastslash);
 		string filename = dpath.substr(lastslash+1);
-		string parentpath= dpath + find_parent_file(dpath, filename);
+		dpath=dpath.substr(0,lastslash);
+		string parentfile= find_parent_file(dpath,filename);
+		string parentpath= dpath + parentfile;
 		
-		
-		
-		//try to open as compositfile if ther is one
-		if (dpath!=parentpath)
-			res = open ((dpath + find_parent_file(dpath, filename)).c_str(), fi->flags);
-		if (res == -1)
+		//try to open as compositfile if there is one
+		if(parentfile!="")//if the parent file was found
+			res = open (parentpath.c_str(), fi->flags);
+
+		if (res<0)//if the parent path could not be opened
+			  //or the file didn't exist
 			return -errno;
 	}	
-
 
 	close(res);
 	return 0;
 }
 
-static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
+static int cmp_read(const char *path, char *buf, size_t size, off_t offset,
 		    struct fuse_file_info *fi)
 {
 	int fd;
@@ -440,23 +413,52 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	strncpy(name, basepath, sizeof(name));
 	strncat(name, path, sizeof(name)-strlen(name));
 
-	fd = open(name, O_RDONLY);
-	if (fd == -1)
+	string parentfile="";
+	int begin=0, end=0;
+	string parentpath;
+
+	if(get_subfiles(name).size()!=0)
+	{//ignore this file, it's a composit parent file
 		return -errno;
+	}
 
-//check if file is composit
-//if so get begin and end
-//if out of range, handle appropriately
+	fd = open(name, O_RDONLY);
+	if (fd < 0)
+	{	
+		//check if file is composit
+		string dpath=name;
+		size_t lastslash=dpath.find_last_of("/");
+		string filename = dpath.substr(lastslash+1);
+		dpath=dpath.substr(0,lastslash);
+		parentfile = find_parent_file(dpath,filename);
+		string parentpath= dpath + parentfile;
+		
+		if (parentfile=="") //if there is no parent file, 
+				    //subfile does not exist
+			return -errno;
 
+		//if so get begin and end
+		begin=get_subfile_begin(parentpath, filename);
+		end=get_subfile_end(parentpath, filename);
+
+		//if out of range, handle appropriately
+		if (offset<begin)
+			offset=begin;
+		if(size>end-begin+1)
+			size=end-begin+1;
+
+		//open the parentfile
+		fd = open(parentpath.c_str(), O_RDONLY);
+	}
 	res = pread(fd, buf, size, offset);
-	if (res == -1)
+	if (res < 0)
 		res = -errno;
 
 	close(fd);
 	return res;
 }
 
-static int xmp_write(const char *path, const char *buf, size_t size,
+static int cmp_write(const char *path, const char *buf, size_t size,
 		     off_t offset, struct fuse_file_info *fi)
 {
 	int fd;
@@ -479,7 +481,7 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 	return res;
 }
 
-static int xmp_statfs(const char *path, struct statvfs *stbuf)
+static int cmp_statfs(const char *path, struct statvfs *stbuf)
 {
 	int res;
 
@@ -494,7 +496,7 @@ static int xmp_statfs(const char *path, struct statvfs *stbuf)
 	return 0;
 }
 
-static int xmp_release(const char *path, struct fuse_file_info *fi)
+static int cmp_release(const char *path, struct fuse_file_info *fi)
 {
 	/* Just a stub.	 This method is optional and can safely be left
 	   unimplemented */
@@ -504,7 +506,7 @@ static int xmp_release(const char *path, struct fuse_file_info *fi)
 	return 0;
 }
 
-static int xmp_fsync(const char *path, int isdatasync,
+static int cmp_fsync(const char *path, int isdatasync,
 		     struct fuse_file_info *fi)
 {
 	/* Just a stub.	 This method is optional and can safely be left
@@ -517,7 +519,7 @@ static int xmp_fsync(const char *path, int isdatasync,
 }
 
 #ifdef HAVE_POSIX_FALLOCATE
-static int xmp_fallocate(const char *path, int mode,
+static int cmp_fallocate(const char *path, int mode,
 			off_t offset, off_t length, struct fuse_file_info *fi)
 {
 	int fd;
@@ -545,7 +547,7 @@ static int xmp_fallocate(const char *path, int mode,
 
 //#ifdef HAVE_SETXATTR
 /* xattr operations are optional and can safely be left unimplemented */
-static int xmp_setxattr(const char *path, const char *name, const char *value,
+static int cmp_setxattr(const char *path, const char *name, const char *value,
 			size_t size, int flags)
 {
 	char pname[pathmax], *ptr;
@@ -558,7 +560,7 @@ static int xmp_setxattr(const char *path, const char *name, const char *value,
 	return 0;
 }
 
-static int xmp_getxattr(const char *path, const char *name, char *value,
+static int cmp_getxattr(const char *path, const char *name, char *value,
 			size_t size)
 {
 	char pname[pathmax], *ptr;
@@ -572,7 +574,7 @@ static int xmp_getxattr(const char *path, const char *name, char *value,
 	return res;
 }
 
-static int xmp_listxattr(const char *path, char *list, size_t size)
+static int cmp_listxattr(const char *path, char *list, size_t size)
 {
 	char pname[pathmax], *ptr;
 	strncpy(pname, basepath, sizeof(pname));
@@ -584,7 +586,7 @@ static int xmp_listxattr(const char *path, char *list, size_t size)
 	return res;
 }
 
-static int xmp_removexattr(const char *path, const char *name)
+static int cmp_removexattr(const char *path, const char *name)
 {
 	char pname[pathmax], *ptr;
 	strncpy(pname, basepath, sizeof(pname));
@@ -597,78 +599,79 @@ static int xmp_removexattr(const char *path, const char *name)
 }
 //#endif /* HAVE_SETXATTR */
 
-static struct fuse_operations xmp_oper;
-//	xmp_oper.init		=xmp_init;
-//	xmp_oper.destroy	=xmp_destroy;
-/*	xmp_oper.getattr	= xmp_getattr;
-	xmp_oper.access		= xmp_access;
-	xmp_oper.readlink	= xmp_readlink;
-	xmp_oper.readdir	= xmp_readdir;
-	xmp_oper.mknod		= xmp_mknod;
-	xmp_oper.mkdir		= xmp_mkdir;
-	xmp_oper.symlink	= xmp_symlink;
-	xmp_oper.unlink		= xmp_unlink;
-	xmp_oper.rmdir		= xmp_rmdir;
-	xmp_oper.rename		= xmp_rename;
-	xmp_oper.link		= xmp_link;
-	xmp_oper.chmod		= xmp_chmod;
-	xmp_oper.chown		= xmp_chown;
-	xmp_oper.truncate	= xmp_truncate;
+static struct fuse_operations cmp_oper;
+//	cmp_oper.init		=cmp_init;
+//	cmp_oper.destroy	=cmp_destroy;
+/*	cmp_oper.getattr	= cmp_getattr;
+	cmp_oper.access		= cmp_access;
+	cmp_oper.readlink	= cmp_readlink;
+	cmp_oper.readdir	= cmp_readdir;
+	cmp_oper.mknod		= cmp_mknod;
+	cmp_oper.mkdir		= cmp_mkdir;
+	cmp_oper.symlink	= cmp_symlink;
+	cmp_oper.unlink		= cmp_unlink;
+	cmp_oper.rmdir		= cmp_rmdir;
+	cmp_oper.rename		= cmp_rename;
+	cmp_oper.link		= cmp_link;
+	cmp_oper.chmod		= cmp_chmod;
+	cmp_oper.chown		= cmp_chown;
+	cmp_oper.truncate	= cmp_truncate;
 #ifdef HAVE_UTIMENSAT
-	xmp_oper.utimens	= xmp_utimens;
+	cmp_oper.utimens	= cmp_utimens;
 #endif
-	xmp_oper.open		= xmp_open;
-	xmp_oper.read		= xmp_read;
-	xmp_oper.write		= xmp_write;
-	xmp_oper.statfs		= xmp_statfs;
-	xmp_oper.release	= xmp_release;
-	xmp_oper.fsync		= xmp_fsync;
+	cmp_oper.open		= cmp_open;
+	cmp_oper.read		= cmp_read;
+	cmp_oper.write		= cmp_write;
+	cmp_oper.statfs		= cmp_statfs;
+	cmp_oper.release	= cmp_release;
+	cmp_oper.fsync		= cmp_fsync;
 #ifdef HAVE_POSIX_FALLOCATE
-	xmp_oper.fallocate	= xmp_fallocate;
+	cmp_oper.fallocate	= cmp_fallocate;
 #endif
 #ifdef HAVE_SETXATTR
-	xmp_oper.setxattr	= xmp_setxattr;
-	xmp_oper.getxattr	= xmp_getxattr;
-	xmp_oper.listxattr	= xmp_listxattr;
-	xmp_oper.removexattr	= xmp_removexattr;
+	cmp_oper.setxattr	= cmp_setxattr;
+	cmp_oper.getxattr	= cmp_getxattr;
+	cmp_oper.listxattr	= cmp_listxattr;
+	cmp_oper.removexattr	= cmp_removexattr;
 #endif
 */
 
-void xmp_operations() {
-//      xmp_oper.init           =xmp_init;
-//      xmp_oper.destroy        =xmp_destroy;
-        xmp_oper.getattr        = xmp_getattr;
-        xmp_oper.access         = xmp_access;
-        xmp_oper.readlink       = xmp_readlink;
-        xmp_oper.readdir        = xmp_readdir;
-        xmp_oper.mknod          = xmp_mknod;
-        xmp_oper.mkdir          = xmp_mkdir;
-        xmp_oper.symlink        = xmp_symlink;
-        xmp_oper.unlink         = xmp_unlink;
-        xmp_oper.rmdir          = xmp_rmdir;
-        xmp_oper.rename         = xmp_rename;
-        xmp_oper.link           = xmp_link;
-        xmp_oper.chmod          = xmp_chmod;
-        xmp_oper.chown          = xmp_chown;
-        xmp_oper.truncate       = xmp_truncate;
+void cmp_operations() {
+//      cmp_oper.init           =cmp_init;
+//      cmp_oper.destroy        =cmp_destroy;
+        cmp_oper.getattr        = cmp_getattr;
+        cmp_oper.access         = cmp_access;
+        cmp_oper.readlink       = cmp_readlink;
+        cmp_oper.readdir        = cmp_readdir;
+        cmp_oper.mknod          = cmp_mknod;
+        cmp_oper.mkdir          = cmp_mkdir;
+        cmp_oper.symlink        = cmp_symlink;
+        cmp_oper.unlink         = cmp_unlink;
+        cmp_oper.rmdir          = cmp_rmdir;
+        cmp_oper.rename         = cmp_rename;
+        cmp_oper.link           = cmp_link;
+        cmp_oper.chmod          = cmp_chmod;
+        cmp_oper.chown          = cmp_chown;
+        cmp_oper.truncate       = cmp_truncate;
 #ifdef HAVE_UTIMENSAT
-        xmp_oper.utimens        = xmp_utimens;
+        cmp_oper.utimens        = cmp_utimens;
 #endif
-        xmp_oper.open           = xmp_open;
-        xmp_oper.read           = xmp_read;
-        xmp_oper.write          = xmp_write;
-        xmp_oper.statfs         = xmp_statfs;
-        xmp_oper.release        = xmp_release;
-        xmp_oper.fsync          = xmp_fsync;
+        cmp_oper.open           = cmp_open;
+        cmp_oper.read           = cmp_read;
+        cmp_oper.write          = cmp_write;
+        cmp_oper.statfs         = cmp_statfs;
+        cmp_oper.release        = cmp_release;
+        cmp_oper.fsync          = cmp_fsync;
 #ifdef HAVE_POSIX_FALLOCATE
-        xmp_oper.fallocate      = xmp_fallocate;
+        cmp_oper.fallocate      = cmp_fallocate;
 #endif
 #ifdef HAVE_SETXATTR
-        xmp_oper.setxattr       = xmp_setxattr;
-        xmp_oper.getxattr       = xmp_getxattr;
-        xmp_oper.listxattr      = xmp_listxattr;
-        xmp_oper.removexattr    = xmp_removexattr;
+        cmp_oper.setxattr       = cmp_setxattr;
+        cmp_oper.getxattr       = cmp_getxattr;
+        cmp_oper.listxattr      = cmp_listxattr;
+        cmp_oper.removexattr    = cmp_removexattr;
 #endif
+//        cmp_oper.fstat    = cmp_fstat;
 }
 
 void usage(char* name) {
@@ -677,7 +680,7 @@ void usage(char* name) {
 
 int main(int argc, char *argv[])
 {
-	xmp_operations();
+	cmp_operations();
 
 	if (argc < 2) {
 		usage(argv[0]);
@@ -689,5 +692,5 @@ int main(int argc, char *argv[])
 /* This is a just simple way to do it. To make a fully functional version of arguments parseing approach, even with optional arguments, you can use fuse_opt_parse and struct Opt to do it. For now, it is not necessary*/
 
 	umask(0);
-	return fuse_main(argc-1, argv+1, &xmp_oper, NULL);
+	return fuse_main(argc-1, argv+1, &cmp_oper, NULL);
 }
