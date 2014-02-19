@@ -60,6 +60,12 @@ static int cmp_getattr(const char *path, struct stat *stbuf)
 
 	string dpath=name;
 	size_t lastslash=dpath.find_last_of("/");
+	while(lastslash==dpath.length()-1)
+	{
+		dpath=dpath.substr(0,lastslash-1);
+		lastslash=dpath.find_last_of("/");
+	}
+
 	string filename = dpath.substr(lastslash+1);
 	dpath=dpath.substr(0,lastslash);
 
@@ -129,7 +135,6 @@ static int cmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
 	dp = opendir(name);
 
-//	dp = opendir(path);
 	if (dp == NULL)
 		return -errno;
 
@@ -146,6 +151,7 @@ static int cmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
 		string thepath=name;
 		//will be the path to each directory entry
+		thepath+="/"; //fixed 
 		thepath+=de->d_name;
 		
 		char* none;
@@ -177,10 +183,10 @@ static int cmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 				}
 				else
 					continue;
-				if (filler(buf, nextfile.c_str(), &st, 0))
+				if (filler(buf, nextfile.c_str(), &st, 0)==-1)
 				{	
-//?					return -errno;
-					break;
+					return -errno;
+//					break;
 				}
 			}
 			if(iscmp==0)
@@ -188,10 +194,10 @@ static int cmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		} 
 		else
 		{
-			if (filler(buf, de->d_name, &st, 0))
+			if (filler(buf, de->d_name, &st, 0)==-1)
 			{	
-//$				return -errno;
-				break;
+				return -errno;
+//				break;
 			}
 		}
 	}
@@ -383,10 +389,16 @@ static int cmp_open(const char *path, struct fuse_file_info *fi)
 	{//the file is either composit or non-existant
 		string dpath=name;
 		size_t lastslash=dpath.find_last_of("/");
+		while(lastslash==dpath.length()-1)
+		{
+			dpath=dpath.substr(0,lastslash-1);
+			lastslash=dpath.find_last_of("/");
+		}
+
 		string filename = dpath.substr(lastslash+1);
 		dpath=dpath.substr(0,lastslash);
 		string parentfile= find_parent_file(dpath,filename);
-		string parentpath= dpath + parentfile;
+		string parentpath= dpath +"/"+ parentfile;
 		
 		//try to open as compositfile if there is one
 		if(parentfile!="")//if the parent file was found
@@ -394,6 +406,7 @@ static int cmp_open(const char *path, struct fuse_file_info *fi)
 
 		if (res<0)//if the parent path could not be opened
 			  //or the file didn't exist
+	
 			return -errno;
 	}	
 
@@ -424,14 +437,20 @@ static int cmp_read(const char *path, char *buf, size_t size, off_t offset,
 
 	fd = open(name, O_RDONLY);
 	if (fd < 0)
-	{	
+	{//file is either composit of non existant	
 		//check if file is composit
 		string dpath=name;
 		size_t lastslash=dpath.find_last_of("/");
+		while(lastslash==dpath.length()-1)
+		{//this shouldn't have to be called but...
+			dpath=dpath.substr(0,lastslash-1);
+			lastslash=dpath.find_last_of("/");
+		}
+
 		string filename = dpath.substr(lastslash+1);
 		dpath=dpath.substr(0,lastslash);
 		parentfile = find_parent_file(dpath,filename);
-		string parentpath= dpath + parentfile;
+		string parentpath= dpath +"/"+ parentfile;
 		
 		if (parentfile=="") //if there is no parent file, 
 				    //subfile does not exist

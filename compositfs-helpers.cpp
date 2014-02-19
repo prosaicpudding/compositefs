@@ -99,7 +99,7 @@ vector<string> get_subfiles(string path)
 //***
 // This function will return the name of the parent file 
 // for the file 'name' in directory 'dpath.'
-// 'dpath' should the absolute path to the file.
+// 'dpath' should the absolute path to the directory of the file.
 // February 2014
 // Helen
 //***
