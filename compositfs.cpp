@@ -489,8 +489,12 @@ static int cmp_write(const char *path, const char *buf, size_t size,
 
 	(void) fi;
 	fd = open(name, O_WRONLY);
-	if (fd == -1)
+	if (fd == -1)//then eith no file or composit file
 		return -errno;
+	//if composite, get beginning and end
+	//then copy the contents of the file after the end 
+	//of the present file (if write is too long)
+	//and add the write, followed by the rest of the comp file
 
 	res = pwrite(fd, buf, size, offset);
 	if (res == -1)
