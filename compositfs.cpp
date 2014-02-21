@@ -96,7 +96,23 @@ static int cmp_access(const char *path, int mask)
 
 	res = access(name, mask);
 	if (res == -1)
-		return -errno;
+	{//file is either composit or not here
+		string dpath=name;
+		size_t lastslash=dpath.find_last_of("/");
+		while(lastslash==dpath.length()-1)
+		{
+			dpath=dpath.substr(0,lastslash-1);
+			lastslash=dpath.find_last_of("/");
+		}
+
+		string filename = dpath.substr(lastslash+1);
+		dpath=dpath.substr(0,lastslash);
+
+		if(find_parent_file(dpath,filename)!="")
+			return 0;
+		else
+			return -errno;
+	}
 
 	return 0;
 }
