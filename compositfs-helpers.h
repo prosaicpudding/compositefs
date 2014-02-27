@@ -15,5 +15,11 @@ off_t get_subfile_end(string parentpath, string filename);
 
 vector<string> get_subfiles(string path);
 
+//returns the names of all directories directly in path
+vector<string> get_subdirectories(string path);
+
 string find_parent_file(string dpath, string name);
 
+//returns the offset of the last slash in the actual path
+//sets subpath and dpath to appropriate values
+int resolve_path(string path, string * dpath, string * subpath);

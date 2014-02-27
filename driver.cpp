@@ -3,6 +3,7 @@
 #include <sys/xattr.h>
 #include <cstdio>
 #include <string.h>
+#include <cmath>
 
 //just some text cases I was using.
 
@@ -24,15 +25,25 @@ int main (void)
 	setxattr("CompFile1.cmp","user.filed",value,2,0); 
 	//I meant for filed not to be a text file
 	//it's just random binary
+//	*value=(int)pow(0xFF+1,sizeof(off_t))-1;
+	*value=-1;
+	setxattr("CompFile1.cmp","user.directorya",value,sizeof(off_t),0); 
+	*value=0x00;
+	setxattr("CompFile1.cmp","user.directorya/file.txt",value,2,0); 
+	*value=0x00;
+	setxattr("CompFile1.cmp","user.directorya/directoryb.txt",value,2,0); 
+
+	getxattr("./CompFile1.cmp","user.directorya",value,sizeof(off_t));
+	printf("%li\n",*value);
 
 	*value=0x32F;
 	setxattr("./CompFile2.cmp","user.file1.txt",value,2,0);
 
 	*value=0x383;
 	setxattr("./CompFile2.cmp","user.file2.txt",value,2,0);
-/*
+
 	*value=0x00;
-	getxattr("./CompFile1.cmp","user.filea.txt",value,sizeof(off_t));
+/*	getxattr("./CompFile1.cmp","user.filea.txt",value,sizeof(off_t));
 	printf("%li\n",*value);
 
 	getxattr("CompFile1.cmp","user.fileb.txt",value,sizeof(off_t));

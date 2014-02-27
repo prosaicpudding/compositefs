@@ -2,6 +2,9 @@
 //**Note**
 //treating the xattrib values as off_t (logically), as it seemed most appropriate
 
+//**Note2**
+//any negative xattrib value will cause the entry name to be interpreted as a directory
+// any / in an attrib name will be interpreted as a path separator
 
 //***
 // This function will return the beginning offset for the file 
@@ -28,6 +31,8 @@ off_t get_subfile_begin(string parentpath, string filename)
 		return 0;
 	}
 	int fileEnd = subfileEnds.at(fileindex);
+	if(fileEnd<0)
+		return 0;
 	int fileBegin = 0;
 	for (int i=0; i<subfileEnds.size(); i++)
 	{//check each file end to find the one right before the selected file
@@ -51,6 +56,8 @@ off_t get_subfile_end(string parentpath, string filename)
 	*buffer=0;
 	lgetxattr(parentpath.c_str(),("user."+filename).c_str(),buffer,sizeof(off_t));
 	off_t ret=*buffer;
+	if (ret<0)
+		return 0;
 	delete (buffer);
 
 	return ret;
@@ -132,3 +139,25 @@ string find_parent_file(string dpath, string name)
         else return "";
 }
 
+int resolve_path(string path, string * dpath=NULL, string * subpath=NULL)
+{
+	int nextslash;
+	nextslash=path.find_first_of("/")+1;
+	string nextpath=path.substr(0,nextslash);
+	int canaccess=access(nextpath.c_str(),F_OK);
+	while (canaccess==0)
+	{
+		nextslash=path.find_first_of("/",nextslash)+1;
+		nextpath=path.substr(0,nextslash);
+		canaccess=access(nextpath.c_str(),F_OK);
+	}
+
+	if (nextslash==0)
+		nextslash=path.length();
+	
+	if(dpath!=NULL)
+		*dpath=path.substr(0,nextslash);
+	if(subpath!=NULL)
+		*subpath=path.substr(nextslash);
+	return nextslash;
+}

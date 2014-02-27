@@ -61,19 +61,29 @@ static int cmp_getattr(const char *path, struct stat *stbuf)
 	string dpath=name;
 	size_t lastslash=dpath.find_last_of("/");
 	while(lastslash==dpath.length()-1)
-	{
+	{//seems these are already truncated
 		dpath=dpath.substr(0,lastslash-1);
 		lastslash=dpath.find_last_of("/");
 	}
 
+	//these lines will have to change
+	//use the path resolution helper to 
+	//get a dpath and subpath
 	string filename = dpath.substr(lastslash+1);
 	dpath=dpath.substr(0,lastslash);
+	//****
+
+	//here make sure the file/directory isn't in a com directory
+	//if it is, ignore it and exit	
 
 	//find which file the comp file is in
+	//should work the same with subfiles
 	string parentfile=find_parent_file(dpath,filename);
 	if (parentfile=="")
 		return -errno;
 	res=lstat((dpath+"/"+parentfile).c_str(),stbuf);
+
+	//here check if we have a file or directory and act accordingly
 
 	//set stbuf->st_size to the actual size
 	off_t begin=get_subfile_begin(dpath+"/"+parentfile,filename);
